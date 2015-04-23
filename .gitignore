@@ -1,0 +1,14 @@
+_region_.*
+auto/
+prv_talkslides.log
+prv_talkslides.pdf
+talkslides-blx.bib
+talkslides.aux
+talkslides.bbl
+talkslides.blg
+talkslides.log
+talkslides.nav
+talkslides.out
+talkslides.run.xml
+talkslides.snm
+talkslides.toc
