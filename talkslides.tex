@@ -106,14 +106,22 @@ handled for us.
 
 \section{Continued Fractions}
 
-\begin{frame}
+\begin{frame}[fragile]
 \frametitle{Decimal representation}
 Consider $\pi$:
 \begin{align*}
 \onslide<1->{\pi &= 3.1415\dots} \\
-\pause
 \onslide<2->{&= 3 + \frac{1}{10^1} + \frac{4}{10^2} + \frac{1}{10^3} + \frac{5}{10^4} + \dots}
 \end{align*}
+\pause\pause
+\begin{minted}{haskell}
+decimal :: RealFrac a => a -> [Integer]
+decimal a = let d = floor a in
+            d : decimal ((a - fromInteger d) * 10)
+
+decimal (1%3) => [0,3,3,3,3,3,3,...
+decimal pi    => [3,1,4,1,5,9,2,...
+\end{minted}
 \end{frame}
 
 \begin{frame}
@@ -125,7 +133,7 @@ Some problems:
 \pause
 Implementing \texttt{Floating} on a stream of decimal digits
 would be nasty
-\pause
+\\~\\ \pause
 Why the 10?!
 \end{frame}
 
@@ -162,13 +170,58 @@ Consider $\pi$:
 \end{frame}
 
 \begin{frame}[fragile]
-\frametitle{Continued fractions}
-
 Let us write this as $\pi = [3,7,15,1,292,\dots]$
-\\
+\\~\\ \pause
 \begin{minted}{haskell}
-continuedFraction :: Fractional a => a -> [Integer]
-continuedFraction = undefined
+cf :: Fractional a => a -> [Integer]
+cf a = let d = floor a in
+       d : cf (recip (a - fromInteger d))
+
+cf (1%3) => [0,3]
+cf pi    => [3,7,15,1,292,...
+\end{minted}
+\pause
+Every real number has a finite, (essentially) unique expansion
+\\~\\ \pause
+This expansion is finite when the number is rational
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Arithmetic}
+Let us consider functions of the form:
+\begin{align*}
+\frac{ax + b}{cx + d}
+\end{align*}
+with $a,b,c,d$ all integers.
+\pause
+\begin{minted}{haskell}
+type Hom = (Integer, Integer,
+            Integer, Integer)
+
+hom :: Hom -> [Integer] -> [Integer]
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+Let $x = [x_0, ...] = x_0 + \frac{1}{x'}$, then:
+\begin{align*}
+\frac{ax + b}{cx + d} &= \frac{a(x_0 + \frac{1}{x'}) + b}{c(x_0 + \frac{1}{x'}) + d} \\
+\only<2->{&= \frac{a(x_0 + \frac{1}{x'}) + b}{c(x_0 + \frac{1}{x'}) + d} \\}
+\only<3->{&= \frac{ax_0 + a\frac{1}{x'} + b}{cx_0 + c\frac{1}{x'} + d}\\}
+\only<4->{&= \frac{ax_0x' + a + bx'}{cx_0x' + c + dx'}}\\
+\only<5->{&= \frac{(ax_0 + b)x' + a}{(cx_0 + d)x' + c}}
+\end{align*}
+\end{frame}
+
+\begin{frame}[fragile]
+\begin{minted}{haskell}
+absorb :: Hom -> Integer -> Hom
+
+absorb (a, b
+        c, d) x0 = (a*x0 + b, a,
+                    c*x0 + d, c)
+
+hom h (x0:rest) == hom (absorb h x0) rest
 \end{minted}
 \end{frame}
 
