@@ -86,18 +86,19 @@ Actually:
 \frametitle{Arbitrary precision arithmetic}
 Arbitrary precision \emph{integer} arithmetic comes built in to
 Haskell (and Python and Ruby and ...)
-\\
-Can use this to implement arbitrary precision floating point.
-\\
+\\~\\
+Can use this to implement arbitrary precision floating point, i.e. $n
+\times b^c$
+\\~\\
 Doesn't save us with \texttt{sqrt}, \texttt{sin}, \texttt{pi} ...
 \end{frame}
 
 \begin{frame}
 \frametitle{\emph{Exact} arithmetic}
 Represents any (computable) real number \emph{exactly}.
-\\
+\\~\\
 Functions in \texttt{Floating} are no longer approximations.
-\\
+\\~\\
 We are able to request any output precision, and the details are
 handled for us.
 \end{frame}
@@ -106,14 +107,46 @@ handled for us.
 
 \section{Continued Fractions}
 
+\begin{frame}
+\frametitle{Decimal representation}
+Consider $\pi$:
+\only<1>{\begin{align*}
+\pi = 3
+\end{align*}}
+\only<2>{\begin{align*}
+\pi = 3 + 0.1415926\dots
+\end{align*}}
+\only<3>{\begin{align*}
+\pi = 3 + \frac{1}{10}(1)
+\end{align*}}
+\only<4>{\begin{align*}
+\pi = 3 + \frac{1}{10}(1 + 0.415926\dots)
+\end{align*}}
+\only<5>{\begin{align*}
+\pi = 3 + \frac{1}{10}(1 + \frac{1}{10}(4))
+\end{align*}}
+\only<6>{\begin{align*}
+\pi = 3 + \frac{1}{10}(1 + \frac{1}{10}(4 + 0.15926\dots))
+\end{align*}}
+\only<7>{\begin{align*}
+\pi = 3 + \frac{1}{10}(1 + \frac{1}{10}(4 + \frac{1}{10}(1)))
+\end{align*}}
+\only<8>{\begin{align*}
+\pi = 3 + \frac{1}{10}(1 + \frac{1}{10}(4 + \frac{1}{10}(1 + 0.5926\dots)))
+\end{align*}}
+\only<9>{\begin{align*}
+\pi = 3 + \frac{1}{10}(1 + \frac{1}{10}(4 + \frac{1}{10}(1 + \frac{1}{10}(5 + \dots))))
+\end{align*}}
+\end{frame}
+
 \begin{frame}[fragile]
 \frametitle{Decimal representation}
 Consider $\pi$:
 \begin{align*}
-\onslide<1->{\pi &= 3.1415\dots} \\
-\onslide<2->{&= 3 + \frac{1}{10^1} + \frac{4}{10^2} + \frac{1}{10^3} + \frac{5}{10^4} + \dots}
+\pi &= 3.1415\dots \\
+&= 3 + \frac{1}{10^1} + \frac{4}{10^2} + \frac{1}{10^3} + \frac{5}{10^4} + \dots
 \end{align*}
-\pause\pause
+
 \begin{minted}{haskell}
 decimal :: RealFrac a => a -> [Integer]
 decimal a = let d = floor a in
@@ -130,10 +163,10 @@ Some problems:
 \begin{align*}
 \frac{1}{3} = 0.333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333\dots
 \end{align*}
-\pause
+\\~\\
 Implementing \texttt{Floating} on a stream of decimal digits
 would be nasty
-\\~\\ \pause
+\\~\\
 Why the 10?!
 \end{frame}
 
@@ -171,7 +204,7 @@ Consider $\pi$:
 
 \begin{frame}[fragile]
 Let us write this as $\pi = [3,7,15,1,292,\dots]$
-\\~\\ \pause
+\\~\\
 \begin{minted}{haskell}
 cf :: Fractional a => a -> [Integer]
 cf a = let d = floor a in
@@ -180,9 +213,8 @@ cf a = let d = floor a in
 cf (1%3) => [0,3]
 cf pi    => [3,7,15,1,292,...
 \end{minted}
-\pause
 Every real number has a finite, (essentially) unique expansion
-\\~\\ \pause
+\\~\\
 This expansion is finite when the number is rational
 \end{frame}
 
@@ -193,7 +225,6 @@ Let us consider functions of the form:
 \frac{ax + b}{cx + d}
 \end{align*}
 with $a,b,c,d$ all integers.
-\pause
 \begin{minted}{haskell}
 type Hom = (Integer, Integer,
             Integer, Integer)
@@ -216,7 +247,6 @@ Let $x = [x_0, ...] = x_0 + \frac{1}{x'}$, then:
 \begin{frame}[fragile]
 \begin{minted}{haskell}
 absorb :: Hom -> Integer -> Hom
-
 absorb (a, b
         c, d) x0 = (a*x0 + b, a,
                     c*x0 + d, c)
