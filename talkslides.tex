@@ -24,8 +24,6 @@
 
 \begin{frame}
 \frametitle{Floating point}
-% I'm sure I don't need to tell a room full of programmers how
-% badly behaved floating point numbers can be.
 \begin{align*}
 \begin{pmatrix}
 64919121   & -159018721 \\
@@ -36,22 +34,38 @@
 0
 \end{pmatrix}
 \end{align*}
-\pause
+\end{frame}
+
+\begin{frame}[fragile]
+\begin{minted}{haskell}
+solveAxb :: Fractional t =>
+            (t, t, t, t) -> (t, t) -> (t, t)
+solveAxb (a11, a12,
+          a21, a22)
+         (b1,
+          b2)
+  = (( a22 * b1 - a12 * b2) / det,
+     (-a21 * b1 + a11 * b2) / det)
+  where det = a11 * a22 - a12 * a21
+
+a :: Fractional t => (t, t, t, t)
+a = (64919121,   -159018721,
+     41869520.5, -102558961)
+
+b :: Fractional t => (t, t)
+b = (1,
+     0)
+\end{minted}
+\end{frame}
+
+\begin{frame}
 Using \texttt{Double}s:
-\only<2>{\begin{align*}
+\begin{align*}
 x =
 \begin{pmatrix}
 102558961 \\
 41869520.5
 \end{pmatrix}
-\end{align*}}
-\pause
-\begin{align*}
-\xcancel{x =
-\begin{pmatrix}
-102558961 \\
-41869520.5
-\end{pmatrix}}
 \end{align*}
 \pause
 Actually...
@@ -95,12 +109,12 @@ Doesn't save us with \texttt{sqrt}, \texttt{sin}, \texttt{pi} ...
 
 \begin{frame}
 \frametitle{\emph{Exact} arithmetic}
-Represents any (computable) real number \emph{exactly}.
+Represents any (computable) real number \emph{exactly}
 \\~\\
-Functions in \texttt{Floating} are no longer approximations.
+Transcendental functions in \texttt{Floating} are no longer approximations
 \\~\\
 We are able to request any output precision, and the details are
-handled for us.
+handled for us
 \end{frame}
 
 %\section{Fast Cauchy}
@@ -237,10 +251,10 @@ hom :: Hom -> [Integer] -> [Integer]
 Let $x = [x_0, ...] = x_0 + \frac{1}{x'}$, then:
 \begin{align*}
 \frac{ax + b}{cx + d} &= \frac{a(x_0 + \frac{1}{x'}) + b}{c(x_0 + \frac{1}{x'}) + d} \\
-\only<2->{&= \frac{a(x_0 + \frac{1}{x'}) + b}{c(x_0 + \frac{1}{x'}) + d} \\}
-\only<3->{&= \frac{ax_0 + a\frac{1}{x'} + b}{cx_0 + c\frac{1}{x'} + d}\\}
-\only<4->{&= \frac{ax_0x' + a + bx'}{cx_0x' + c + dx'}}\\
-\only<5->{&= \frac{(ax_0 + b)x' + a}{(cx_0 + d)x' + c}}
+\uncover<2->{&= \frac{a(x_0 + \frac{1}{x'}) + b}{c(x_0 + \frac{1}{x'}) + d} \\}
+\uncover<3->{&= \frac{ax_0 + a\frac{1}{x'} + b}{cx_0 + c\frac{1}{x'} + d}\\}
+\uncover<4->{&= \frac{ax_0x' + a + bx'}{cx_0x' + c + dx'}}\\
+\uncover<5->{&= \frac{(ax_0 + b)x' + a}{(cx_0 + d)x' + c}}
 \end{align*}
 \end{frame}
 
@@ -252,6 +266,96 @@ absorb (a, b
                     c*x0 + d, c)
 
 hom h (x0:rest) == hom (absorb h x0) rest
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+Let $z = \frac{ax + b}{cx + d}$. As $x \in [0, \infty]$,
+$z$ must lie in $[\frac{a}{c}, \frac{b}{d}]$.
+\\~\\
+So if $\frac{a}{c}$ and $\frac{b}{d}$ have the same integer part $q$, we
+know for sure that $z = [q,\dots]$.
+\\~\\
+\begin{minted}{haskell}
+tryEmit :: Hom -> Maybe Integer
+tryEmit (a, b
+         c, d) = if c /= 0 && d /= 0 && r == s then
+                   Just r
+                 else
+                   Nothing
+  where r = a `quot` c
+        s = b `quot` d
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+Let $z = q + \frac{1}{z'}$, then:
+\begin{align*}
+z' &= (z - q)^{-1} \\
+\uncover<2->{&= \left(\frac{ax + b}{cx + d} - q\right)^{-1} \\}
+\uncover<3->{&= \left(\frac{(ax + b) - q(cx + d)}{cx + d}\right)^{-1} \\}
+\uncover<4->{&= \left(\frac{(a - cq)x + (b - dq)}{cx + d}\right)^{-1} \\}
+\uncover<5->{&= \frac{cx + d}{(a - cq)x + (b - dq)}}
+\end{align*}
+\end{frame}
+
+\begin{frame}[fragile]
+\begin{minted}{haskell}
+emit :: Hom -> Integer -> Hom
+emit (a, b
+      c, d) q = (c,       d,
+                 a - c*q, b - d*q)
+
+hom h cf == q : hom (emit q h) cf
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+\begin{minted}{haskell}
+hom :: Hom -> Integer -> Integer
+hom h (x:xs) = case tryEmit h of
+                 Just d -> d : hom (homEmit h d) (x:xs)
+                 Nothing ->    hom (homAbsorb h x) xs
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+To do arithmetic, repeat all of the above with
+\begin{align*}
+\frac{axy + bx + cy + d}{exy + fx + gy + h}
+\end{align*}
+\begin{minted}{haskell}
+type Bihom = (Integer, Integer, Integer, Integer,
+              Integer, Integer, Integer, Integer)
+
+bihom :: Bihom -> [Integer] -> [Integer] -> [Integer]
+\end{minted}
+Now we can absorb from either $x$ or $y$, and emit similar to before.
+\end{frame}
+
+\begin{frame}[fragile]
+\begin{minted}{haskell}
+  (+) = bihom (0, 1, 1, 0,
+               0, 0, 0, 1)
+  (*) = bihom (1, 0, 0, 0,
+               0, 0, 0, 1)
+...
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Transcendental functions}
+\pause
+\begin{align*}
+e^x &= [1, \frac{1}{x}, -2, \frac{3}{x}, 2, \frac{5}{x}, -2, \dots] \\
+~\\
+\log x &= [0, \frac{1}{x-1}, \frac{2}{1}, \frac{3}{x-1}, \frac{2}{3}, \frac{5}{x-1}, \frac{2}{5}, \dots]
+\end{align*}
+\pause
+\begin{minted}{haskell}
+type Hom a = (a, a, a, a)
+
+hom :: Hom a -> [a] -> [Integer]
 \end{minted}
 \end{frame}
 
