@@ -1,4 +1,4 @@
-\documentclass[11pt]{beamer}
+\documentclass[11pt,aspectratio=169]{beamer}
 \usetheme{Dresden}
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath}
@@ -21,6 +21,14 @@
 \end{frame}
 
 \section{Intro}
+
+\begin{frame}
+Integers: Counting numbers $\{\dots, -2, -1, 0, 1, 2, \dots\}$
+\\~\\
+Rational: Fractions $\{\frac{p}{q} : p, q \text{ are integers}\}$
+\\~\\
+Reals: All values on the continuum
+\end{frame}
 
 \begin{frame}
 \frametitle{Floating point}
@@ -117,7 +125,76 @@ We are able to request any output precision, and the details are
 handled for us
 \end{frame}
 
-%\section{Fast Cauchy}
+\section{Fast Cauchy}
+
+\begin{frame}
+\frametitle{Cauchy Sequences}
+\begin{definition}
+A \emph{Cauchy sequence} is a sequence of rational numbers $\{x_0, x_1, \dots, x_i, \dots\}$
+such that for any $\epsilon$, there exists an $N$ such that
+\begin{align*}
+\vert x_n - x_m \vert < \epsilon
+\end{align*}
+for any $m > N, n > N$.
+\end{definition}
+~\\
+The real numbers are \emph{defined} to be the set of all Cauchy sequences
+\\~\\
+(Where we consider two sequences to be the same if their difference
+converges to $0$)
+\end{frame}
+
+\begin{frame}
+\begin{align*}
+\frac{1}{3} &= \{\frac{1}{3}, \frac{1}{3}, \frac{1}{3}, \dots\} \\
+~\\
+\pi &= \{3, 3.1, 3.14, 3.141, \dots\}
+\end{align*}
+\end{frame}
+
+\begin{frame}
+\frametitle{Effective Cauchy Sequence}
+\begin{definition}
+A real number $x$ is represented as an \emph{effective Cauchy sequence} if
+there is a sequence of rational numbers $\{x_0, x_1, \dots, x_i,
+\dots\}$ such that
+\begin{align*}
+\vert x - x_p \vert < 2^{-p}
+\end{align*}
+\end{definition}
+\begin{align*}
+\frac{1}{3} &= \{\frac{0}{1}, \frac{1}{2}, \frac{1}{4}, \frac{3}{8}, \frac{5}{16}, \frac{11}{32}, \dots\}\\
+~\\
+\pi &= \{\frac{3}{1}, \frac{6}{2}, \frac{13}{4}, \frac{25}{8}, \frac{50}{16}, \frac{101}{32}, \dots\}
+\end{align*}
+\end{frame}
+
+\begin{frame}
+\frametitle{Fast Binary Cauchy Sequence}
+\begin{definition}
+A real number $x$ is represented as an \emph{Fast Binary Cauchy Sequence} if
+there is a sequence of \emph{integers} $\{n_0, n_1, \dots, n_i, \dots\}$ such that
+\begin{align*}
+\vert x - 2^{-p}n_p \vert < 2^{-p}
+\end{align*}
+\end{definition}
+\begin{align*}
+\frac{1}{3} &= \{0, 1, 1, 3, 5, 11 \} \\
+~\\
+\pi &= \{3, 6, 13, 25, 50, 101 \}
+\end{align*}
+\end{frame}
+
+% TODO
+
+\begin{frame}
+\frametitle{Disadvantages}
+Result arrives all at once
+\\~\\
+Effort can be wasted calculating things at lower precision
+\\~\\
+If we later need more precision, we have to start all over
+\end{frame}
 
 \section{Continued Fractions}
 
@@ -169,6 +246,7 @@ decimal a = let d = floor a in
 decimal (1%3) => [0,3,3,3,3,3,3,...
 decimal pi    => [3,1,4,1,5,9,2,...
 \end{minted}
+% TODO: step eval
 \end{frame}
 
 \begin{frame}
@@ -219,15 +297,19 @@ Consider $\pi$:
 \begin{frame}[fragile]
 Let us write this as $\pi = [3,7,15,1,292,\dots]$
 \\~\\
+% TODO: base case
+% TODO: step eval
 \begin{minted}{haskell}
-cf :: Fractional a => a -> [Integer]
+type CF = [Integer]
+
+cf :: Fractional a => a -> CF
 cf a = let d = floor a in
        d : cf (recip (a - fromInteger d))
 
 cf (1%3) => [0,3]
 cf pi    => [3,7,15,1,292,...
 \end{minted}
-Every real number has a finite, (essentially) unique expansion
+Every real number has a (essentially) unique expansion
 \\~\\
 This expansion is finite when the number is rational
 \end{frame}
@@ -271,7 +353,7 @@ hom h (x0:rest) == hom (absorb h x0) rest
 
 \begin{frame}[fragile]
 Let $z = \frac{ax + b}{cx + d}$. As $x \in [0, \infty]$,
-$z$ must lie in $[\frac{a}{c}, \frac{b}{d}]$.
+$z$ must lie in $[\frac{a}{c}, \frac{b}{d}]$. % TODO: check typo
 \\~\\
 So if $\frac{a}{c}$ and $\frac{b}{d}$ have the same integer part $q$, we
 know for sure that $z = [q,\dots]$.
@@ -312,10 +394,14 @@ hom h cf == q : hom (emit q h) cf
 
 \begin{frame}[fragile]
 \begin{minted}{haskell}
-hom :: Hom -> Integer -> Integer
+hom :: Hom -> CF -> CF
 hom h (x:xs) = case tryEmit h of
                  Just d -> d : hom (homEmit h d) (x:xs)
                  Nothing ->    hom (homAbsorb h x) xs
+
+2 * pi == hom (2, 0,
+               0, 1) pi
+       == CF [6,3,1,1,7,2,146,3,6,1]
 \end{minted}
 \end{frame}
 
@@ -328,17 +414,13 @@ To do arithmetic, repeat all of the above with
 type Bihom = (Integer, Integer, Integer, Integer,
               Integer, Integer, Integer, Integer)
 
-bihom :: Bihom -> [Integer] -> [Integer] -> [Integer]
+bihom :: Bihom -> CF -> CF -> CF
 \end{minted}
 Now we can absorb from either $x$ or $y$, and emit similar to before.
-\end{frame}
-
-\begin{frame}[fragile]
+% TODO: Show all
 \begin{minted}{haskell}
-  (+) = bihom (0, 1, 1, 0,
-               0, 0, 0, 1)
-  (*) = bihom (1, 0, 0, 0,
-               0, 0, 0, 1)
+(+) = bihom (0, 1, 1, 0,
+             0, 0, 0, 1)
 ...
 \end{minted}
 \end{frame}
@@ -350,13 +432,21 @@ Now we can absorb from either $x$ or $y$, and emit similar to before.
 e^x &= [1, \frac{1}{x}, -2, \frac{3}{x}, 2, \frac{5}{x}, -2, \dots] \\
 ~\\
 \log x &= [0, \frac{1}{x-1}, \frac{2}{1}, \frac{3}{x-1}, \frac{2}{3}, \frac{5}{x-1}, \frac{2}{5}, \dots]
-\end{align*}
+\end{align*} % TODO: Skip details
 \pause
 \begin{minted}{haskell}
 type Hom a = (a, a, a, a)
 
-hom :: Hom a -> [a] -> [Integer]
+hom :: (Num a, ...) => Hom a -> [a] -> CF
+
+cfcf :: [CF] -> CF
+cfcf = hom (1, 0, 0, 1)
 \end{minted}
+\end{frame}
+
+\begin{frame}
+\frametitle{Disadvantages}
+Can be much slower than Cauchy sequences
 \end{frame}
 
 \begin{frame}
