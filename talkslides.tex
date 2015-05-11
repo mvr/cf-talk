@@ -6,6 +6,7 @@
 \usepackage{amssymb}
 \usepackage[backend=bibtex]{biblatex}
 \usepackage{cancel}
+\usepackage{hyperref}
 \usepackage{minted}
 \addbibresource{talkslides.bib}
 
@@ -23,6 +24,7 @@
 \section{Intro}
 
 \begin{frame}
+\frametitle{Numbers}
 Integers: Counting numbers $\{\dots, -2, -1, 0, 1, 2, \dots\}$
 \\~\\
 Rational: Fractions $\{\frac{p}{q} : p, q \text{ are integers}\}$
@@ -138,10 +140,9 @@ such that for any $\epsilon$, there exists an $N$ such that
 for any $m > N, n > N$.
 \end{definition}
 ~\\
-The real numbers are \emph{defined} to be the set of all Cauchy sequences
-\\~\\
-(Where we consider two sequences to be the same if their difference
-converges to $0$)
+The real numbers are \emph{defined} to be the set of all Cauchy
+sequences (where we consider two sequences to be the same if their
+difference converges to $0$)
 \end{frame}
 
 \begin{frame}
@@ -169,29 +170,74 @@ there is a sequence of rational numbers $\{x_0, x_1, \dots, x_i,
 \end{align*}
 \end{frame}
 
-\begin{frame}
-\frametitle{Fast Binary Cauchy Sequence}
+\begin{frame}[fragile]
+\frametitle{Fast Binary Cauchy}
 \begin{definition}
-A real number $x$ is represented as an \emph{Fast Binary Cauchy Sequence} if
+A real number $x$ is represented as a \emph{Fast Binary Cauchy Sequence} if
 there is a sequence of \emph{integers} $\{n_0, n_1, \dots, n_i, \dots\}$ such that
 \begin{align*}
 \vert x - 2^{-p}n_p \vert < 2^{-p}
 \end{align*}
 \end{definition}
 \begin{align*}
-\frac{1}{3} &= \{0, 1, 1, 3, 5, 11 \} \\
-~\\
-\pi &= \{3, 6, 13, 25, 50, 101 \}
+\frac{1}{3} &= \{0, 1, 1, 3, 5, 11, \dots \} \\
+\pi &= \{3, 6, 13, 25, 50, 101, \dots \}
 \end{align*}
 \end{frame}
 
-% TODO
+\begin{frame}[fragile]
+\begin{minted}{haskell}
+type CReal = Natural -> Integer
+\end{minted}
+\pause
+\begin{align*}
+\frac{x[p] - 1}{2^p} < x < \frac{x[p] + 1}{2^p}
+\end{align*}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Integers}
+\begin{minted}{haskell}
+fromInteger :: Integer -> CReal
+fromInteger n = \p -> n * 2^p
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Addition}
+If:
+\begin{align*}
+\frac{a[p+2] - 1}{2^{p+2}} &< a < \frac{a[p+2] + 1}{2^{p+2}} \\
+\frac{b[p+2] - 1}{2^{p+2}} &< b < \frac{b[p+2] + 1}{2^{p+2}}
+\end{align*}
+then:
+\begin{align*}
+\frac{r - 1}{2^p} &< a + b < \frac{r + 1}{2^p}
+\end{align*}
+where:
+\begin{align*}
+r = \lfloor \frac{a+b}{4} \rceil
+\end{align*}
+\begin{minted}{haskell}
+(+) :: CReal -> CReal -> CReal
+a + b = \p -> round $ ((a (p+2) + b (p+2)) % 4
+\end{minted}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Transcendental functions}
+Evaluated using Taylor series:
+\begin{align*}
+e^x &= 1 + x + \frac{1}{2!}x^2 + \frac{1}{3!}x^3 + \dots \\
+~\\
+\sin x &= x - \frac{1}{3!}x^3 + \frac{1}{5!}x^5 - \dots
+\end{align*}
+Truncated when the terms get small enough.
+\end{frame}
 
 \begin{frame}
 \frametitle{Disadvantages}
 Result arrives all at once
-\\~\\
-Effort can be wasted calculating things at lower precision
 \\~\\
 If we later need more precision, we have to start all over
 \end{frame}
@@ -297,14 +343,16 @@ Consider $\pi$:
 \begin{frame}[fragile]
 Let us write this as $\pi = [3,7,15,1,292,\dots]$
 \\~\\
-% TODO: base case
 % TODO: step eval
 \begin{minted}{haskell}
 type CF = [Integer]
 
 cf :: Fractional a => a -> CF
 cf a = let d = floor a in
-       d : cf (recip (a - fromInteger d))
+       if fromInteger d == a then
+         [d]
+       else
+         d : cf (recip (a - fromInteger d))
 
 cf (1%3) => [0,3]
 cf pi    => [3,7,15,1,292,...
@@ -353,7 +401,7 @@ hom h (x0:rest) == hom (absorb h x0) rest
 
 \begin{frame}[fragile]
 Let $z = \frac{ax + b}{cx + d}$. As $x \in [0, \infty]$,
-$z$ must lie in $[\frac{a}{c}, \frac{b}{d}]$. % TODO: check typo
+$z$ must lie in $[\frac{b}{d}, \frac{a}{c}]$.
 \\~\\
 So if $\frac{a}{c}$ and $\frac{b}{d}$ have the same integer part $q$, we
 know for sure that $z = [q,\dots]$.
@@ -417,11 +465,18 @@ type Bihom = (Integer, Integer, Integer, Integer,
 bihom :: Bihom -> CF -> CF -> CF
 \end{minted}
 Now we can absorb from either $x$ or $y$, and emit similar to before.
-% TODO: Show all
+\end{frame}
+
+\begin{frame}[fragile]
 \begin{minted}{haskell}
 (+) = bihom (0, 1, 1, 0,
              0, 0, 0, 1)
-...
+(-) = bihom (0, 1, -1, 0,
+             0, 0,  0, 1)
+(*) = bihom (1, 0, 0, 0,
+             0, 0, 0, 1)
+(/) = bihom (0, 1, 0, 0,
+             0, 0, 1, 0)
 \end{minted}
 \end{frame}
 
@@ -432,7 +487,7 @@ Now we can absorb from either $x$ or $y$, and emit similar to before.
 e^x &= [1, \frac{1}{x}, -2, \frac{3}{x}, 2, \frac{5}{x}, -2, \dots] \\
 ~\\
 \log x &= [0, \frac{1}{x-1}, \frac{2}{1}, \frac{3}{x-1}, \frac{2}{3}, \frac{5}{x-1}, \frac{2}{5}, \dots]
-\end{align*} % TODO: Skip details
+\end{align*}
 \pause
 \begin{minted}{haskell}
 type Hom a = (a, a, a, a)
@@ -446,7 +501,14 @@ cfcf = hom (1, 0, 0, 1)
 
 \begin{frame}
 \frametitle{Disadvantages}
-Can be much slower than Cauchy sequences
+Much slower than Cauchy sequences
+\end{frame}
+
+\begin{frame}
+\frametitle{Code}
+Fast Binary Cauchy: \\ \url{http://hackage.haskell.org/package/numbers}
+\\~\\
+Continued Fractions: \\ \url{http://github.com/mvr/cf}
 \end{frame}
 
 \begin{frame}
