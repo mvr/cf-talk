@@ -1,4 +1,4 @@
-\documentclass[11pt,aspectratio=169]{beamer}
+\documentclass[11pt]{beamer}
 \usetheme{Dresden}
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath}
@@ -25,7 +25,9 @@
 
 \begin{frame}
 \frametitle{Numbers}
-Integers: Counting numbers $\{\dots, -2, -1, 0, 1, 2, \dots\}$
+Natural numbers: Counting numbers $\{0, 1, 2, \dots\}$
+\\~\\
+Integers: Natural numbers and negatives $\{\dots, -2, -1, 0, 1, 2, \dots\}$
 \\~\\
 Rational: Fractions $\{\frac{p}{q} : p, q \text{ are integers}\}$
 \\~\\
@@ -154,7 +156,7 @@ difference converges to $0$)
 \end{frame}
 
 \begin{frame}
-\frametitle{Effective Cauchy Sequence}
+\frametitle{Effective Cauchy}
 \begin{definition}
 A real number $x$ is represented as an \emph{effective Cauchy sequence} if
 there is a sequence of rational numbers $\{x_0, x_1, \dots, x_i,
@@ -189,17 +191,19 @@ there is a sequence of \emph{integers} $\{n_0, n_1, \dots, n_i, \dots\}$ such th
 \begin{minted}{haskell}
 type CReal = Natural -> Integer
 \end{minted}
-\pause
-\begin{align*}
+  \begin{align*}
 \frac{x[p] - 1}{2^p} < x < \frac{x[p] + 1}{2^p}
 \end{align*}
 \end{frame}
 
 \begin{frame}[fragile]
-\frametitle{Integers}
+\frametitle{Easy Stuff}
 \begin{minted}{haskell}
 fromInteger :: Integer -> CReal
 fromInteger n = \p -> n * 2^p
+
+negate :: CReal -> CReal
+negate x = \p -> negate (x p)
 \end{minted}
 \end{frame}
 
@@ -212,11 +216,11 @@ If:
 \end{align*}
 then:
 \begin{align*}
-\frac{r - 1}{2^p} &< a + b < \frac{r + 1}{2^p}
+\frac{r - 1}{2^p} & < a + b < \frac{r + 1}{2^p}
 \end{align*}
 where:
 \begin{align*}
-r = \lfloor \frac{a+b}{4} \rceil
+r = \lfloor \frac{a[p+2]+b[p+2]}{4} \rceil
 \end{align*}
 \begin{minted}{haskell}
 (+) :: CReal -> CReal -> CReal
@@ -232,7 +236,7 @@ e^x &= 1 + x + \frac{1}{2!}x^2 + \frac{1}{3!}x^3 + \dots \\
 ~\\
 \sin x &= x - \frac{1}{3!}x^3 + \frac{1}{5!}x^5 - \dots
 \end{align*}
-Truncated when the terms get small enough.
+If $\vert x \vert < 1$, then eventually the terms are very small
 \end{frame}
 
 \begin{frame}
@@ -278,12 +282,6 @@ Consider $\pi$:
 
 \begin{frame}[fragile]
 \frametitle{Decimal representation}
-Consider $\pi$:
-\begin{align*}
-\pi &= 3.1415\dots \\
-&= 3 + \frac{1}{10^1} + \frac{4}{10^2} + \frac{1}{10^3} + \frac{5}{10^4} + \dots
-\end{align*}
-
 \begin{minted}{haskell}
 decimal :: RealFrac a => a -> [Integer]
 decimal a = let d = floor a in
@@ -348,10 +346,8 @@ Let us write this as $\pi = [3,7,15,1,292,\dots]$
 type CF = [Integer]
 
 cf :: Fractional a => a -> CF
-cf a = let d = floor a in
-       if fromInteger d == a then
-         [d]
-       else
+cf a | fromInteger (floor a) == a = [a]
+cf a | otherwise = let d = floor a in
          d : cf (recip (a - fromInteger d))
 
 cf (1%3) => [0,3]
@@ -400,8 +396,8 @@ hom h (x0:rest) == hom (absorb h x0) rest
 \end{frame}
 
 \begin{frame}[fragile]
-Let $z = \frac{ax + b}{cx + d}$. As $x \in [0, \infty]$,
-$z$ must lie in $[\frac{b}{d}, \frac{a}{c}]$.
+Let $z = \frac{ax + b}{cx + d}$. As $x \in [0, \infty)$,
+$z$ must lie between $\frac{a}{c}$ and $\frac{b}{d}$.
 \\~\\
 So if $\frac{a}{c}$ and $\frac{b}{d}$ have the same integer part $q$, we
 know for sure that $z = [q,\dots]$.
@@ -444,8 +440,8 @@ hom h cf == q : hom (emit q h) cf
 \begin{minted}{haskell}
 hom :: Hom -> CF -> CF
 hom h (x:xs) = case tryEmit h of
-                 Just d -> d : hom (homEmit h d) (x:xs)
-                 Nothing ->    hom (homAbsorb h x) xs
+                 Just d -> d : hom (emit h d) (x:xs)
+                 Nothing ->    hom (absorb h x) xs
 
 2 * pi == hom (2, 0,
                0, 1) pi
@@ -482,7 +478,6 @@ Now we can absorb from either $x$ or $y$, and emit similar to before.
 
 \begin{frame}[fragile]
 \frametitle{Transcendental functions}
-\pause
 \begin{align*}
 e^x &= [1, \frac{1}{x}, -2, \frac{3}{x}, 2, \frac{5}{x}, -2, \dots] \\
 ~\\
